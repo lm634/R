@@ -1,2 +1,2 @@
 # R
-Current list of R files
+List of R files for analytics automation
