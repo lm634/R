@@ -11,8 +11,9 @@
 #=============================================>
 rm(list = ls())
 
-setwd("/Users/.../campaigns/csvExports/")
-directory = read.csv("fileDirectory.csv", sep = ",")
+setwd("/Users/.../campaigns/csvExports/directory/")
+directory = read.csv("fileDirectory_s.csv", sep = ",")
+directory2 = read.csv("fileDirectory_n.csv",sep = ",")
 
 setwd("/Users/.../aggregate_activity/bounces/")
 bounces = data.frame("emailAddress" = character(), "bounceType" = character(), "filePath" = character(),
@@ -42,6 +43,7 @@ for (i in as.numeric(directory$X)) {
     }
   }
 }
+
 #-----------------------------------------
 #- separate to hard and soft bounces
 hardBounces = subset(bounces, bounceType == "hard")
@@ -51,7 +53,7 @@ softBounce = as.data.frame(table(softBounces$emailAddress))
 rm(hardBounces, softBounces, temp1, counter)
 
 #-----------------------------------------
-#- find the recency of latest bounce
+#- find the recency of latest bounce #!!!
 hardBounce$recency = NA
 hardBounce$lastBounce = NA
 for (i in as.numeric(row.names(hardBounce))) {
@@ -85,13 +87,13 @@ for (i in as.numeric(row.names(softBounce))) {
   }
 }
 softBounce = softBounce[-c(toDelete),]
-rm(i, j, k, percent, x, y, toDelete, scoreTable)
+rm(i, j, k, percent, x, y, toDelete, scoreTable, bounces)
 
 #=============================================>
 # opens
 #=============================================>
 #-----------------------------------------
-#- populates opens table - takes some time
+#- populates opens table - segmented - #!!!
 setwd("/Users/.../granular_activity/opens")
 counter = 1
 for (i in as.numeric(directory$X)) {
@@ -111,9 +113,31 @@ for (i in as.numeric(directory$X)) {
 }
 rm(temp1, i, j, counter, percent)
 
+#- populates opens table - partially segmented
+counter = 1
+for (i in as.numeric(directory2$X)) {
+  if (!is.na(directory2$filePathKey[i])) {
+    temp1 = read.csv(as.character(directory2$filePathKey[i]), sep = ",")
+    for (j in as.numeric(row.names(temp1))) {
+      opens[counter,1] = as.character(temp1$Email[j])
+      opens[counter,2] = as.character(temp1$Timestamp[j])
+      opens[counter,3] = as.character(directory2$filePathKey[i])
+      opens[counter,4] = as.character(directory2$segmentationPath[i])
+      opens[counter,5] = as.character(directory2$listName[i])
+      counter = counter + 1
+    }
+    percent = paste(round(i * (100 / length(directory2$filePathKey)),digits = 1), " % complete", sep = "")
+    print(percent)
+  }
+}
+rm(temp1, i, j, counter, percent)
+
 #-----------------------------------------
-#- opens by campaign and total opens
+#- opens by campaign and total opens #!!!
 countCumulOpens = as.data.frame(table(opens$emailAddress))
+
+## testing ##
+#--> opensTest1 = subset(opens, emailAddress == 'name@email.com')
 
 countOpensByCampaign = as.data.frame(table(opens$emailAddress, opens$segmentationPath))
 toDelete = c()
@@ -129,7 +153,7 @@ rm(i, toDelete)
 # clicks
 #=============================================>
 #-----------------------------------------
-#- clicks subset table
+#- clicks subset table for segmented campaigns
 setwd("/Users/.../granular_activity/clicks")
 counter = 1
 for (i in as.numeric(directory$X)) {
@@ -145,45 +169,89 @@ for (i in as.numeric(directory$X)) {
     }
   }
 }
+rm(j, counter, temp1)
 
-#-----------------------------------------
-#- clicks subset by campaign --> email
-test = as.data.frame(table(temp1$Email))
-
-clicksTest1 = subset(clicks, segmentationPath == "r20170622_juneNewsletter.csv")
-clicksTest2 = subset(clicks, segmentationPath == 'r20170509_yourNewChallenge.csv')
-
-url = c('https://www.url1.co.uk',
-        'https://www.url2.co.uk',
-        'https://www.url3.co.uk',
-        'https://www.url4.co.uk',
-        'https://www.url5.co.uk')
-
-tempList = data.frame("url" = character(), "emailAddress" = character(), "filePath" = character(), stringsAsFactors = FALSE)
-for (i in url) {
-  for (j in seq(1,length(clicksTest1$url),1)) {
-    k = clicksTest1$url[j]
-    if (startsWith(k,i) == TRUE) {
-      toAppend = c(as.character(i),as.character(clicksTest1$emailAddress[j]),as.character(clicksTest1$filePath[j]))
-      print(toAppend)
-      tempList <<- rbind(tempList,toAppend)
+#- clicks subset table for partially segmented campaigns
+setwd("/Users/.../granular_activity/clicks")
+counter = 1
+for (i in as.numeric(directory2$X)) {
+  if (!is.na(directory2$filePathKey[i])) {
+    temp1 = read.csv(as.character(directory2$filePathKey[i], sep = ","))
+    for (j in as.numeric(row.names(temp1))) {
+      clicks[counter,1] = as.character(temp1$Email[j])
+      clicks[counter,2] = as.character(temp1$Timestamp[j])
+      clicks[counter,3] = as.character(temp1$Url[j])
+      clicks[counter,4] = as.character(directory2$filePathKey[i])
+      clicks[counter,5] = as.character(directory2$segmentationPath[i])
+      counter = counter + 1
     }
   }
 }
+rm(j, counter, temp1)
 
+#-----------------------------------------
+#- clicks subset by campaign --> email
+setwd("/Users/.../csvExports/clicksOpensBounces/clicksByMailout/")
 
-
-for (i in temp1) {
-  if (i = )
-  
-temp1= as.data.frame(table(directory$segmentationPath))
+for (i in seq(1,length(directory$segmentationPath),5)) {
+  fileName = as.character(directory$segmentationPath[i])
+  fileNameClicks = subset(clicks, segmentationPath == fileName)
+  write.csv(fileNameClicks,fileName)
 }
 
-rm(counter, i, j, temp1)
+for (i in seq(1,length(directory2$segmentationPath),5)) {
+  fileName = as.character(directory2$segmentationPath[i])
+  fileNameClicks = subset(clicks, segmentationPath == fileName)
+  write.csv(fileNameClicks,fileName)
+}
 
+rm(i, fileName,fileNameClicks)
 
+#-----------------------------------------
+#- latest campaign list of links clicked by email
+setwd("/Users/.../csvExports/clicksOpensBounces/clicksByMailout/")
+#--> latestCampaign = read.csv("campaignName.csv", sep = ",")
+urlList = NA
+for (i in latestCampaign$url) {
+  isInList <<- FALSE
+  for (j in urlList) {
+    string1 = substr(i,0,80)
+    if (!is.na(j)) {
+      if (string1 == j) {
+        isInList = TRUE
+      }
+    }
+  }
+  if (!isInList) {
+    urlList = c(urlList, string1)
+  }
+}
+latestCampaign = latestCampaign[order(latestCampaign$emailAddress),]
+rm(i, j, string1, isInList)
+urlList = as.data.frame(urlList[-c(1)])
 
+#=============================================>
+# saving csv files
+#=============================================>
+wd = "/Users/.../csvExports/clicksOpensBounces/"
+setwd(wd)
 
-#-find anyone that has clicked multiple times - output a list per campaign
-#name, email, group, times clicked, ranked by click-rate
+write.csv(hardBounce,"hardBounces.csv")
+rm(hardBounce)
 
+write.csv(softBounce,"softBounce.csv")
+rm(softBounce)
+
+write.csv(opens,"totalOpens.csv")
+rm(opens)
+
+write.csv(countOpensByCampaign,"opensByCampaign.csv")
+rm(countOpensByCampaign)
+
+write.csv(countCumulOpens,"opensByEmail.csv")
+rm(countCumulOpens)
+
+write.csv(clicks,"totalClicks.csv")
+rm(clicks)
+
+rm(list = ls())
